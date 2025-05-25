@@ -1,0 +1,22 @@
+#Domoticz
+domoticz/data/
+domoticz/mqtt/
+domoticz/zigbeedata/
+domoticz/.env
+
+#Media
+media/data/
+media/.env
+
+#Traefik
+traefik/ca.pem
+traefik/cert-key.pem
+traefik/cert.pem
+traefik/.env
+
+#Grafana
+traefik/grafana_data/
+
+#Log & PID
+*.log
+*.pid

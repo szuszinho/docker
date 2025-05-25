@@ -1,0 +1,45 @@
+services:
+  domoticz:
+    image: domoticz/domoticz
+    container_name: domoticz
+    restart: unless-stopped
+    volumes:
+      - ${DOMOTICZ_DATA}:/opt/domoticz/userdata
+    environment:
+      - TZ=${TZ}
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.domoticz.entrypoints=websecure"
+      - "traefik.http.routers.domoticz.rule=Host(`${DOMOTICZ_URL}`)"
+      - "traefik.http.services.domoticz.loadbalancer.server.port=8080"
+      - "traefik.http.routers.domoticz.tls=true"
+  
+  mqtt-broker:
+    image: eclipse-mosquitto
+    container_name: mqtt
+    restart: always
+    volumes:
+      - ${MQTT_DATA}:/mosquitto/data
+      - ${MQTT_LOG}:/mosquitto/log
+      - ${MQTT_CONF}:/mosquitto/config/mosquitto.conf
+    ports:
+      - 1883:1883
+      - 9001:9001
+  zigbee2mqtt:
+    container_name: zigbee2mqtt
+    image: koenkk/zigbee2mqtt:latest-dev
+    restart: unless-stopped
+    volumes:
+      - ${ZIGBEE_DATA}:/app/data
+      - /run/udev:/run/udev:ro
+    ports:
+      - 8082:8080
+    environment:
+      - TZ=${TZ}
+    devices:
+       - /dev/serial/by-id/usb-ITead_Sonoff_Zigbee_3.0_USB_Dongle_Plus_8632e0509645ed118e45c88f0a86e0b4-if00-port0:/dev/ttyUSB0
+networks:
+  default:
+    external: true
+    name: ${NETWORK_NAME}
+    

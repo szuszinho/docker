@@ -1,0 +1,84 @@
+services:
+  traefik:
+    image: traefik
+    container_name: traefik
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ${TRAEFIK_YML}:/traefik.yml:ro
+      - ${TRAEFIK_CONF}:/config.yml:ro
+      - ${TRAEFIK_CA}:/ca.pem:ro
+      - ${TRAEFIK_CERT_KEY}:/cert-key.pem:ro
+      - ${TRAEFIK_CERT}:/cert.pem:ro
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.dashboard.rule=Host(`${TRAEFIK_URL}`) && (PathPrefix(`/api`) || PathPrefix(`/dashboard`))
+      - traefik.http.routers.dashboard.tls=true
+      - traefik.http.routers.dashboard.entrypoints=websecure
+      - traefik.http.routers.dashboard.service=api@internal
+      - traefik.http.services.dashboard.loadbalancer.server.scheme=https
+    restart: unless-stopped
+
+  prometheus:
+    image: prom/prometheus
+    container_name: prometheus
+    volumes:
+      - ${PROMETHEUS_CONF}:/etc/prometheus/prometheus.yml
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.prometheus.rule=Host(`${PROMETHEUS_URL}`)
+      - traefik.http.routers.prometheus.entrypoints=websecure
+      - traefik.http.routers.prometheus.tls=true
+      - traefik.http.services.prometheus.loadbalancer.server.port=9090
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana-enterprise
+    container_name: grafana
+    user: "0"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PW}
+    volumes:
+      - ${GRAFANA_DATA}:/var/lib/grafana
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.grafana.rule=Host(`${GRAFANA_URL}`)
+      - traefik.http.routers.grafana.entrypoints=websecure
+      - traefik.http.routers.grafana.tls=true
+      - traefik.http.services.grafana.loadbalancer.server.port=3000
+    restart: unless-stopped
+  
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor
+    container_name: cadvisor
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.cadvisor.rule=Host(`${CADVISOR_URL}`)
+      - traefik.http.routers.cadvisor.entrypoints=websecure
+      - traefik.http.routers.cadvisor.tls=true
+      - traefik.http.services.cadvisor.loadbalancer.server.port=8080
+    restart: unless-stopped
+  
+  node_exporter:
+    image: quay.io/prometheus/node-exporter:latest
+    container_name: node_exporter
+    command:
+      - '--path.rootfs=/host'
+    restart: unless-stopped
+    pid: host
+    expose:
+      - 9100
+    volumes:
+      - '/:/host:ro,rslave'
+
+networks:
+  default:
+    external: true
+    name: ${NETWORK_NAME}

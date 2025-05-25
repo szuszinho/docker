@@ -1,0 +1,39 @@
+global:
+  checkNewVersion: false
+  sendAnonymousUsage: false
+
+entryPoints:
+  web:
+    address: ":80"
+    http:
+      redirections:
+        entryPoint:
+            scheme: https
+            to: websecure
+  websecure:
+    address: ":443"
+  metrics:
+    address: ":8082"
+
+api: {}
+
+metrics:
+  prometheus:
+    entryPoint: metrics
+    addEntryPointsLabels: true
+    addRoutersLabels: true
+    addServicesLabels: true 
+    buckets:
+      - "0.1"
+      - "0.3"
+      - "1.2"
+      - "5.0"
+      - "10.0"
+
+providers:
+  docker:
+    endpoint: "unix:///var/run/docker.sock"
+    exposedByDefault: false
+
+  file:
+    filename: /config.yml

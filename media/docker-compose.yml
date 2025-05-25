@@ -1,0 +1,113 @@
+services:
+
+  jackett:
+    image: lscr.io/linuxserver/jackett
+    container_name: jackett
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=${TZ}
+    volumes:
+      - ${JACKETT_CONF}:/config
+      - ${JACKETT_DOWNLOAD}:/downloads
+    ports:
+      - 9117:9117
+    restart: unless-stopped
+
+  sonarr:
+    image: lscr.io/linuxserver/sonarr
+    container_name: sonarr
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=${TZ}
+    volumes:
+      - ${SONARR_CONF}:/config
+      - ${SONARR_TV}:/tv
+      - ${SONARR_DOWNLOAD}:/downloads
+    restart: unless-stopped
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.sonarr.rule=Host(`${SONARR_URL}`)
+      - traefik.http.routers.sonarr.entrypoints=websecure
+      - traefik.http.routers.sonarr.tls=true
+      - traefik.http.services.sonarr.loadbalancer.server.port=8989
+
+  radarr:
+    image: lscr.io/linuxserver/radarr
+    container_name: radarr
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Europe/Budapest
+    volumes:
+      - ${RADARR_CONF}:/config
+      - ${RADARR_MOVIES}:/movies
+      - ${RADARR_DOWNLOAD}:/downloads
+    restart: unless-stopped
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.radarr.rule=Host(`${RADARR_URL}`)
+      - traefik.http.routers.radarr.entrypoints=websecure
+      - traefik.http.routers.radarr.tls=true
+      - traefik.http.services.radarr.loadbalancer.server.port=7878
+
+  emby:
+    image: lscr.io/linuxserver/emby
+    container_name: emby
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=${TZ}
+    volumes:
+      - ${EMBY_CONF}:/config
+      - ${EMBY_TV}:/data/tvshows
+      - ${EMBY_MOVIES}:/data/movies
+      - ${EMBY_TRANSCODE}:/transcode #optional
+    ports:
+      - 8096:8096
+    devices:
+      - /dev/dri:/dev/dri #optional
+    restart: unless-stopped
+
+  qbittorrent:
+    image: lscr.io/linuxserver/qbittorrent
+    container_name: qbittorrent
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=${TZ}
+      - WEBUI_PORT=8083
+    volumes:
+      - ${QBIT_CONF}:/config
+      - ${QBIT_DOWNLOAD}:/downloads
+    ports:
+      - 6881:6881
+      - 6881:6881/udp
+    restart: unless-stopped
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.qbit.rule=Host(`${QBIT_URL}`)
+      - traefik.http.routers.qbit.entrypoints=websecure
+      - traefik.http.routers.qbit.tls=true
+      - traefik.http.services.qbit.loadbalancer.server.port=8083
+
+  bazarr:
+    image: lscr.io/linuxserver/bazarr
+    container_name: bazarr
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Europe/Budapest
+    ports:
+      - 6767:6767
+    volumes:
+      - ${BAZARR_CONF}:/config
+      - ${BAZARR_MOVIES}:/movies
+      - ${BAZARR_TV}:/tv
+    restart: unless-stopped
+
+networks:
+  default:
+    external: true
+    name: ${NETWORK_NAME}
